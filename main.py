@@ -1,4 +1,3 @@
-
 import functools
 import folium
 import pandas as pd
@@ -152,7 +151,10 @@ def locate_coords(locations: set, def_lat: float, def_lon: float)->tuple:
     return coords
 
 
-def distance_haversine(lat: float, def_lat: float, lon: float, def_lon: float) -> float:
+def distance_haversine(lat: float,
+                       def_lat: float,
+                       lon: float,
+                       def_lon: float) -> float:
     """
     calculates relative distance using haversine equasion
     :param float lat: latitude of the address
@@ -167,10 +169,12 @@ def distance_haversine(lat: float, def_lat: float, lon: float, def_lon: float) -
     >>> distance_haversine(63, 49.83826, 34, 24.0232)
     0.24841457803560293
     """
-    relative_distance = 2 * np.arcsin(np.sqrt((np.sin(((def_lat-lat)/2) * (np.pi/180)))**2 + 
+    relative_distance = 2 * np.arcsin(np.sqrt((np.sin(((def_lat-lat)/2) *
+                                     (np.pi/180)))**2 + 
                                       np.cos(lat * (np.pi/180)) *
                                       np.cos(def_lat * (np.pi/180)) *
-                                     (np.sin(((def_lon-lon)/2) * (np.pi/180)))**2))
+                                     (np.sin(((def_lon-lon)/2) *
+                                     (np.pi/180)))**2))
     return relative_distance
 
 
@@ -203,7 +207,10 @@ def search_by_year(file: str, year: str) -> tuple:
     return locations, films
 
 
-def parse_locations(locations: set, films: dict, def_lat: float, def_lon: float) -> set:
+def parse_locations(locations: set,
+                    films: dict,
+                    def_lat: float,
+                    def_lon: float) -> set:
     """
     This function parses locations into set of markers with their location and
     relative haversine distance
@@ -211,7 +218,8 @@ def parse_locations(locations: set, films: dict, def_lat: float, def_lon: float)
     :param dict films: 
     :param float def_lat: default latitude
     :param float def_lon: default longitude
-    :return set markers: set of markers which will be later written into tsv file
+    :return set markers: set of markers which
+    will be later written into tsv file
     """
     locations_with_coords = locate_coords(locations, def_lat, def_lon)
     markers = set()
@@ -257,71 +265,65 @@ def create_html_map(year: str, def_lat: float, def_lon: float) -> None:
     lon = data_sorted_and_cut['Lon']
     films = data_sorted_and_cut['Film']
     fg = folium.FeatureGroup(name=year)
-    for lt, ln, flm in zip(lat, lon, films): 
+    for lt, ln, flm in zip(lat, lon, films):
         iframe = folium.IFrame(html=html.format(year, flm),
-                               width=3000,
-                               height=1000)
+                               width=300,
+                               height=100)
         fg.add_child(folium.Marker(location=[lt, ln],
                      popup=folium.Popup(iframe),
                      icon=folium.Icon(color = "red")))
+    sl = folium.FeatureGroup(name="Starting location")
+    folium.Marker(location=[def_lat, def_lon],
+                  popup='Starting location',
+                  icon=folium.Icon(color='green', icon='ok-sign'),).add_to(sl)
     fg_list.append(fg)
     for fg in fg_list:
         map.add_child(fg)
+    map.add_child(sl)
     map.add_child(folium.LayerControl())
     map.save('Map.html')
 
 
-def main(file: str, year: str, def_lat: float, def_lon: float) -> None:
+def parse_input() -> tuple:
     """
-    the main function
-    :param str file:
-    :param str year:
-    :param float def_lat:
-    :param float def_lon:
+    parses input
 
-    :return None
+    :return str file: path to file
+    :return str year: year to search
+    :return float lat: latitude
+    :return float lon: longitude
+
     """
-    start = time.time()
-    locations, films = search_by_year(file, year)
-    markers = parse_locations(locations, films, def_lat, def_lon)
-    write_tsv(markers)
-    create_html_map(year, def_lat, def_lon)
-    print(f"done in {abs(start - time.time())}")
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-    #multiprocessing.freeze_support()
-    #main("locationsmini.list", "2014", 49.83826, 24.0232)
-
-
-if __name__ == '__main__':
-    #x = map(geocode_worker, addresses)
-    #x = map(geocode_worker, addresses)
-    #x = map(geocode_worker, addresses)
-    #x = map(geocode_worker, addresses)
-    #print("-------------")
-    #print(list(x))
-    #print("-------------")
-    #print(main())
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('year', type=str,
                         help='the year you wnt to search for')
-    parser.add_argument('latitude', type= float,
+    parser.add_argument('latitude', type=float,
                         help='latitude of center location')
-    parser.add_argument('longitude', type= float,
+    parser.add_argument('longitude', type=float,
                         help='longitude of center location')
-    parser.add_argument('file', type= str,
+    parser.add_argument('file', type=str,
                         help='file location')
-    
-
-
     args = parser.parse_args()
     args_dict = vars(args)
     year = args_dict["year"]
     lat = args_dict["latitude"]
     lon = args_dict["longitude"]
     file = args_dict["file"]
-    multiprocessing.freeze_support()
-    main(file, year, lat, lon)
+    return file, year, lat, lon
 
-    #print(args.accumulate(args.integers))
+
+def main() -> None:
+    """
+    the main function
+
+    """
+    file, year, def_lat, def_lon = parse_input()
+    locations, films = search_by_year(file, year)
+    markers = parse_locations(locations, films, def_lat, def_lon)
+    write_tsv(markers)
+    create_html_map(year, def_lat, def_lon)
+
+
+if __name__ == '__main__':
+    multiprocessing.freeze_support()
+    main()
